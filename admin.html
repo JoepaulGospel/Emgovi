@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — EMGOVI</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="pin-gate" class="pin-gate">
+  <div class="form-card">
+    <h1>Admin access</h1>
+    <div id="pin-error" class="form-error"></div>
+    <div class="form-group">
+      <label>Admin PIN</label>
+      <input id="pin-input" type="password" inputmode="numeric">
+    </div>
+    <button id="pin-submit" class="btn btn-primary btn-block">Unlock</button>
+  </div>
+</div>
+
+<div id="admin-app" style="display:none;">
+  <header class="site-header">
+    <span class="logo">EMGOVI Admin</span>
+    <div class="header-actions">
+      <a href="index.html" class="icon-btn">View store</a>
+    </div>
+  </header>
+
+  <div class="container section">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="products">Products</button>
+      <button class="tab-btn" data-tab="orders">Orders</button>
+    </div>
+
+    <div id="overview" class="tab-panel active">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Total revenue</div><div class="value" id="stat-revenue">—</div></div>
+        <div class="stat-card"><div class="label">Orders</div><div class="value" id="stat-orders">—</div></div>
+        <div class="stat-card"><div class="label">Products</div><div class="value" id="stat-products">—</div></div>
+        <div class="stat-card"><div class="label">Low stock alerts</div><div class="value" id="stat-lowstock">—</div></div>
+      </div>
+      <h2 style="font-size:18px; margin-bottom:12px;">Best sellers</h2>
+      <table class="admin-table" id="bestsellers-table">
+        <thead><tr><th>Product</th><th>Units sold</th><th>Revenue</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="products" class="tab-panel">
+      <button id="new-product-btn" class="btn btn-primary" style="margin-bottom:20px;">+ Add product</button>
+      <table class="admin-table">
+        <thead><tr><th>Name</th><th>Category</th><th>Base price</th><th>Total stock</th><th></th></tr></thead>
+        <tbody id="products-tbody"></tbody>
+      </table>
+    </div>
+
+    <div id="orders" class="tab-panel">
+      <table class="admin-table">
+        <thead><tr><th>Order</th><th>Customer / Delivery</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody id="orders-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Product edit modal -->
+<div id="product-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:100; align-items:center; justify-content:center;">
+  <div class="form-card" style="max-height:85vh; overflow-y:auto; width:520px;">
+    <h1 id="modal-title">Add product</h1>
+    <div id="modal-error" class="form-error"></div>
+    <input type="hidden" id="product-id">
+    <div class="form-group"><label>Name</label><input id="product-name" type="text"></div>
+    <div class="form-group"><label>Description</label><textarea id="product-description" rows="2"></textarea></div>
+    <div class="form-group"><label>Category</label><input id="product-category" type="text" value="Phones"></div>
+    <div class="form-group"><label>Base price (₦)</label><input id="product-base-price" type="number"></div>
+    <div class="form-group">
+      <label>Image URL</label>
+      <input id="product-image" type="text" placeholder="Paste a hosted image link">
+    </div>
+
+    <label style="font-size:13px; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Variants (color / storage / price / stock)</label>
+    <div id="variants-list" style="margin:12px 0;"></div>
+    <button id="add-variant-btn" class="btn btn-secondary" style="margin-bottom:20px;">+ Add variant</button>
+
+    <div style="display:flex; gap:12px;">
+      <button id="save-product-btn" class="btn btn-primary" style="flex:1;">Save</button>
+      <button id="cancel-modal-btn" class="btn btn-secondary" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+let allProducts = [];
+let allOrders = [];
+
+function adminHeaders() {
+  return { 'X-Admin-Pin': getAdminPin() };
+}
+
+document.getElementById('pin-submit').addEventListener('click', unlockAdmin);
+document.getElementById('pin-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockAdmin(); });
+
+async function unlockAdmin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  setAdminPin(pin);
+  try {
+    // Cheap way to validate the PIN: try a write-gated call with no changes.
+    const res = await fetch('/api/products', { method: 'GET', headers: adminHeaders() });
+    // GET doesn't check the PIN, so verify by attempting the orders admin view instead.
+    const ordersRes = await fetch('/api/orders', { headers: adminHeaders() });
+    if (ordersRes.status === 401) {
+      document.getElementById('pin-error').textContent = 'Incorrect PIN.';
+      document.getElementById('pin-error').classList.add('visible');
+      return;
+    }
+    document.getElementById('pin-gate').style.display = 'none';
+    document.getElementById('admin-app').style.display = 'block';
+    loadAll();
+  } catch (err) {
+    document.getElementById('pin-error').textContent = 'Something went wrong. Please try again.';
+    document.getElementById('pin-error').classList.add('visible');
+  }
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+async function loadAll() {
+  await Promise.all([loadProducts(), loadOrders()]);
+  renderOverview();
+}
+
+async function loadProducts() {
+  allProducts = await fetchJSON('/api/products');
+  const tbody = document.getElementById('products-tbody');
+  tbody.innerHTML = allProducts.map(p => {
+    const totalStock = (p.variants || []).reduce((s, v) => s + v.stock_qty, 0);
+    return `
+      <tr>
+        <td>${p.name}</td>
+        <td>${p.category}</td>
+        <td>${formatNaira(p.base_price)}</td>
+        <td>${totalStock}</td>
+        <td>
+          <button class="btn btn-secondary edit-btn" data-id="${p.id}" style="padding:6px 14px; font-size:13px;">Edit</button>
+          <button class="btn btn-secondary delete-btn" data-id="${p.id}" style="padding:6px 14px; font-size:13px; color:var(--danger);">Delete</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', () => openModal(parseInt(b.dataset.id, 10))));
+  tbody.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', () => deleteProduct(parseInt(b.dataset.id, 10))));
+}
+
+async function loadOrders() {
+  allOrders = await fetchJSON('/api/orders', { headers: adminHeaders() });
+  const tbody = document.getElementById('orders-tbody');
+  const statuses = ['Paid', 'Processing', 'Out for Delivery', 'Delivered'];
+  tbody.innerHTML = allOrders.map(o => `
+    <tr>
+      <td>#${o.id}</td>
+      <td>${o.delivery_address}<br><span style="color:var(--text-secondary);">${o.phone}</span></td>
+      <td>${o.items.map(i => `${i.product_name} × ${i.quantity}`).join('<br>')}</td>
+      <td>${formatNaira(o.total)}</td>
+      <td>
+        <select class="status-select" data-id="${o.id}">
+          ${statuses.map(s => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('.status-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      await fetchJSON('/api/orders', {
+        method: 'PUT',
+        headers: adminHeaders(),
+        body: JSON.stringify({ id: parseInt(sel.dataset.id, 10), status: sel.value }),
+      });
+    });
+  });
+}
+
+function renderOverview() {
+  const revenue = allOrders.reduce((sum, o) => sum + o.total, 0);
+  document.getElementById('stat-revenue').textContent = formatNaira(revenue);
+  document.getElementById('stat-orders').textContent = allOrders.length;
+  document.getElementById('stat-products').textContent = allProducts.length;
+
+  const lowStockCount = allProducts.reduce((count, p) =>
+    count + (p.variants || []).filter(v => v.stock_qty > 0 && v.stock_qty <= 5).length, 0);
+  document.getElementById('stat-lowstock').textContent = lowStockCount;
+
+  const salesByProduct = {};
+  for (const o of allOrders) {
+    for (const item of o.items) {
+      if (!salesByProduct[item.product_name]) salesByProduct[item.product_name] = { units: 0, revenue: 0 };
+      salesByProduct[item.product_name].units += item.quantity;
+      salesByProduct[item.product_name].revenue += item.price * item.quantity;
+    }
+  }
+  const sorted = Object.entries(salesByProduct).sort((a, b) => b[1].units - a[1].units).slice(0, 5);
+  document.querySelector('#bestsellers-table tbody').innerHTML = sorted.length
+    ? sorted.map(([name, s]) => `<tr><td>${name}</td><td>${s.units}</td><td>${formatNaira(s.revenue)}</td></tr>`).join('')
+    : '<tr><td colspan="3" style="color:var(--text-secondary);">No sales yet.</td></tr>';
+}
+
+// ---------- Product modal ----------
+let variantRows = [];
+
+document.getElementById('new-product-btn').addEventListener('click', () => openModal(null));
+document.getElementById('cancel-modal-btn').addEventListener('click', closeModal);
+document.getElementById('add-variant-btn').addEventListener('click', () => { variantRows.push({ color: '', storage: '', price: '', stock_qty: '' }); renderVariantRows(); });
+
+function openModal(productId) {
+  document.getElementById('modal-error').classList.remove('visible');
+  const product = productId ? allProducts.find(p => p.id === productId) : null;
+
+  document.getElementById('modal-title').textContent = product ? 'Edit product' : 'Add product';
+  document.getElementById('product-id').value = product ? product.id : '';
+  document.getElementById('product-name').value = product ? product.name : '';
+  document.getElementById('product-description').value = product ? product.description : '';
+  document.getElementById('product-category').value = product ? product.category : 'Phones';
+  document.getElementById('product-base-price').value = product ? product.base_price : '';
+  document.getElementById('product-image').value = product ? product.image_url : '';
+
+  variantRows = product && product.variants.length
+    ? product.variants.map(v => ({ color: v.color, storage: v.storage, price: v.price, stock_qty: v.stock_qty, sku: v.sku }))
+    : [{ color: '', storage: '', price: '', stock_qty: '' }];
+  renderVariantRows();
+
+  document.getElementById('product-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('product-modal').style.display = 'none';
+}
+
+function renderVariantRows() {
+  document.getElementById('variants-list').innerHTML = variantRows.map((v, i) => `
+    <div style="display:flex; gap:6px; margin-bottom:8px;">
+      <input placeholder="Color" value="${v.color || ''}" data-field="color" data-idx="${i}" style="width:22%; padding:8px; border-radius:8px; border:1px solid var(--border);">
+      <input placeholder="Storage" value="${v.storage || ''}" data-field="storage" data-idx="${i}" style="width:22%; padding:8px; border-radius:8px; border:1px solid var(--border);">
+      <input placeholder="Price" type="number" value="${v.price || ''}" data-field="price" data-idx="${i}" style="width:26%; padding:8px; border-radius:8px; border:1px solid var(--border);">
+      <input placeholder="Stock" type="number" value="${v.stock_qty || ''}" data-field="stock_qty" data-idx="${i}" style="width:20%; padding:8px; border-radius:8px; border:1px solid var(--border);">
+      <button class="remove-variant-btn" data-idx="${i}" style="background:none; border:none; color:var(--danger); font-size:18px;">×</button>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('#variants-list input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      variantRows[inp.dataset.idx][inp.dataset.field] = inp.value;
+    });
+  });
+  document.querySelectorAll('.remove-variant-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      variantRows.splice(parseInt(btn.dataset.idx, 10), 1);
+      if (variantRows.length === 0) variantRows.push({ color: '', storage: '', price: '', stock_qty: '' });
+      renderVariantRows();
+    });
+  });
+}
+
+document.getElementById('save-product-btn').addEventListener('click', async () => {
+  const id = document.getElementById('product-id').value;
+  const errorEl = document.getElementById('modal-error');
+  errorEl.classList.remove('visible');
+
+  const name = document.getElementById('product-name').value.trim();
+  const base_price = parseInt(document.getElementById('product-base-price').value, 10);
+
+  if (!name || !base_price) {
+    errorEl.textContent = 'Name and base price are required.';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  const payload = {
+    name,
+    description: document.getElementById('product-description').value.trim(),
+    category: document.getElementById('product-category').value.trim() || 'Phones',
+    base_price,
+    image_url: document.getElementById('product-image').value.trim(),
+    variants: variantRows
+      .filter(v => v.price)
+      .map(v => ({
+        color: v.color || '',
+        storage: v.storage || '',
+        price: parseInt(v.price, 10),
+        stock_qty: parseInt(v.stock_qty, 10) || 0,
+      })),
+  };
+
+  try {
+    if (id) {
+      await fetchJSON('/api/products', { method: 'PUT', headers: adminHeaders(), body: JSON.stringify({ id: parseInt(id, 10), ...payload }) });
+    } else {
+      await fetchJSON('/api/products', { method: 'POST', headers: adminHeaders(), body: JSON.stringify(payload) });
+    }
+    closeModal();
+    await loadProducts();
+    renderOverview();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.add('visible');
+  }
+});
+
+async function deleteProduct(id) {
+  if (!confirm('Delete this product? This cannot be undone.')) return;
+  await fetchJSON(`/api/products?id=${id}`, { method: 'DELETE', headers: adminHeaders() });
+  await loadProducts();
+  renderOverview();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account — EMGOVI</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo">EMGOVI</a>
+  <nav>
+    <a href="shop.html">Shop</a>
+  </nav>
+  <div class="header-actions">
+    <a href="account.html" class="icon-btn">Account</a>
+    <a href="cart.html" class="icon-btn">Cart<span class="cart-badge" style="display:none">0</span></a>
+  </div>
+</header>
+
+<div id="content" class="container section" style="max-width:640px;"></div>
+
+<footer class="site-footer">EMGOVI — Lagos, Nigeria</footer>
+
+<script src="js/app.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const nextUrl = params.get('next') || 'account.html';
+
+async function init() {
+  const user = await getCurrentUser();
+  if (user) {
+    renderLoggedIn(user);
+  } else {
+    renderAuthForms();
+  }
+}
+
+function renderAuthForms() {
+  document.getElementById('content').innerHTML = `
+    <div class="form-card">
+      <div class="tabs" style="margin-bottom:20px;">
+        <button class="tab-btn active" id="tab-login">Log in</button>
+        <button class="tab-btn" id="tab-signup">Create account</button>
+      </div>
+      <div id="form-error" class="form-error"></div>
+      <div id="login-panel">
+        <div class="form-group"><label>Email</label><input id="login-email" type="email"></div>
+        <div class="form-group"><label>Password</label><input id="login-password" type="password"></div>
+        <button id="login-btn" class="btn btn-primary btn-block">Log in</button>
+      </div>
+      <div id="signup-panel" style="display:none;">
+        <div class="form-group"><label>Full name</label><input id="signup-name" type="text"></div>
+        <div class="form-group"><label>Email</label><input id="signup-email" type="email"></div>
+        <div class="form-group"><label>Phone</label><input id="signup-phone" type="tel"></div>
+        <div class="form-group"><label>Password</label><input id="signup-password" type="password"></div>
+        <button id="signup-btn" class="btn btn-primary btn-block">Create account</button>
+      </div>
+    </div>
+  `;
+
+  const errorEl = document.getElementById('form-error');
+  const showError = (msg) => { errorEl.textContent = msg; errorEl.classList.add('visible'); };
+
+  document.getElementById('tab-login').addEventListener('click', () => {
+    document.getElementById('tab-login').classList.add('active');
+    document.getElementById('tab-signup').classList.remove('active');
+    document.getElementById('login-panel').style.display = 'block';
+    document.getElementById('signup-panel').style.display = 'none';
+    errorEl.classList.remove('visible');
+  });
+  document.getElementById('tab-signup').addEventListener('click', () => {
+    document.getElementById('tab-signup').classList.add('active');
+    document.getElementById('tab-login').classList.remove('active');
+    document.getElementById('signup-panel').style.display = 'block';
+    document.getElementById('login-panel').style.display = 'none';
+    errorEl.classList.remove('visible');
+  });
+
+  document.getElementById('login-btn').addEventListener('click', async () => {
+    errorEl.classList.remove('visible');
+    try {
+      await fetchJSON('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: document.getElementById('login-email').value.trim(),
+          password: document.getElementById('login-password').value,
+        }),
+      });
+      location.href = nextUrl;
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  document.getElementById('signup-btn').addEventListener('click', async () => {
+    errorEl.classList.remove('visible');
+    try {
+      await fetchJSON('/api/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: document.getElementById('signup-name').value.trim(),
+          email: document.getElementById('signup-email').value.trim(),
+          phone: document.getElementById('signup-phone').value.trim(),
+          password: document.getElementById('signup-password').value,
+        }),
+      });
+      location.href = nextUrl;
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+}
+
+async function renderLoggedIn(user) {
+  document.getElementById('content').innerHTML = `
+    <h1 style="font-size:26px;">Hi, ${user.name}</h1>
+    <p style="color:var(--text-secondary); margin-bottom:24px;">${user.email}</p>
+    <button id="logout-btn" class="btn btn-secondary" style="margin-bottom:32px;">Log out</button>
+    <h2 style="font-size:18px; margin-bottom:16px;">Your orders</h2>
+    <div id="orders"></div>
+  `;
+
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    await fetchJSON('/api/auth/logout', { method: 'POST' });
+    location.href = 'account.html';
+  });
+
+  try {
+    const orders = await fetchJSON('/api/orders');
+    const ordersEl = document.getElementById('orders');
+    if (orders.length === 0) {
+      ordersEl.innerHTML = `<p style="color:var(--text-secondary);">No orders yet.</p>`;
+      return;
+    }
+    ordersEl.innerHTML = orders.map(o => `
+      <div class="cart-row" style="align-items:flex-start;">
+        <div class="details">
+          <div class="name">Order #${o.id} — ${o.status}</div>
+          <div class="variant">${new Date(o.created_at).toLocaleDateString()}</div>
+          ${o.items.map(i => `<div class="variant">${i.product_name} (${i.variant_label || ''}) × ${i.quantity}</div>`).join('')}
+        </div>
+        <div style="font-weight:600;">${formatNaira(o.total)}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
