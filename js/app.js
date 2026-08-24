@@ -70,10 +70,11 @@ function updateCartBadge() {
 }
 
 async function fetchJSON(url, options = {}) {
+  const { headers: customHeaders, ...restOptions } = options;
   const res = await fetch(url, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options,
+    ...restOptions,
+    headers: { 'Content-Type': 'application/json', ...(customHeaders || {}) },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
