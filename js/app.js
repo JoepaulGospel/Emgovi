@@ -1,6 +1,7 @@
 /* EMGOVI shared frontend logic */
 
 const CART_KEY = 'emgovi_cart';
+const CATEGORIES = ['Phones', 'Earphones', 'Chargers & Cables', 'Phone Cases', 'Bluetooth Speakers', 'Power Banks', 'Watches', 'Laptops'];
 
 function formatNaira(amount) {
   return '₦' + Number(amount).toLocaleString('en-NG');
@@ -106,4 +107,31 @@ function setAdminPin(pin) {
   sessionStorage.setItem('emgovi_admin_pin', pin);
 }
 
-document.addEventListener('DOMContentLoaded', updateCartBadge);
+function renderCategoryMenu(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="category-menu">
+      <button class="category-menu-btn" id="category-menu-btn" type="button">☰ Categories</button>
+      <div class="category-dropdown" id="category-dropdown">
+        <a href="shop.html">All products</a>
+        ${CATEGORIES.map((c) => `<a href="shop.html?category=${encodeURIComponent(c)}">${c}</a>`).join('')}
+      </div>
+    </div>
+  `;
+
+  const btn = document.getElementById('category-menu-btn');
+  const dropdown = document.getElementById('category-dropdown');
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', () => dropdown.classList.remove('open'));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateCartBadge();
+  renderCategoryMenu('category-nav');
+});
