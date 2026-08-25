@@ -76,6 +76,33 @@ button {
   font-size: 14px;
 }
 
+.search-form {
+  display: flex;
+  align-items: center;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  flex: 1;
+  max-width: 320px;
+  margin: 0 20px;
+}
+
+.search-form input {
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 14px;
+  font-family: var(--font);
+  width: 100%;
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .search-form { max-width: none; margin: 0 10px; }
+  .site-header nav { display: none; }
+}
+
 .icon-btn {
   background: none;
   border: none;
@@ -151,6 +178,17 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .product-card .info { padding: 12px; gap: 4px; }
+  .product-card .name { font-size: 13px; }
+  .product-card .price { font-size: 13px; }
+  .badge { font-size: 11px; padding: 3px 8px; }
 }
 
 .product-card {
