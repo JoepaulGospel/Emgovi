@@ -14,6 +14,9 @@
     <a href="shop.html">Shop</a>
     <a href="shop.html?category=Phones">Phones</a>
   </nav>
+  <form class="search-form" onsubmit="event.preventDefault(); const q=this.querySelector('input').value.trim(); if(q) location.href='shop.html?search='+encodeURIComponent(q);">
+    <input type="text" placeholder="Search phones…">
+  </form>
   <div class="header-actions">
     <a href="account.html" class="icon-btn">Account</a>
     <a href="cart.html" class="icon-btn">Cart<span class="cart-badge" style="display:none">0</span></a>
