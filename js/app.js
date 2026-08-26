@@ -1,7 +1,7 @@
 /* EMGOVI shared frontend logic */
 
 const CART_KEY = 'emgovi_cart';
-const CATEGORIES = ['Phones', 'Earphones', 'Chargers & Cables', 'Phone Cases', 'Bluetooth Speakers', 'Power Banks', 'Watches', 'Laptops'];
+const CATEGORIES = ['Phones', 'Chargers', 'Power Banks', 'Gift Cards'];
 
 function formatNaira(amount) {
   return '₦' + Number(amount).toLocaleString('en-NG');
