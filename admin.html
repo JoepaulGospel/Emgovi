@@ -74,7 +74,11 @@
     <input type="hidden" id="product-id">
     <div class="form-group"><label>Name</label><input id="product-name" type="text"></div>
     <div class="form-group"><label>Description</label><textarea id="product-description" rows="2"></textarea></div>
-    <div class="form-group"><label>Category</label><input id="product-category" type="text" value="Phones"></div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="product-category"></select>
+      <input id="product-category-other" type="text" placeholder="Type new category name" style="display:none; margin-top:8px;">
+    </div>
     <div class="form-group"><label>Base price (₦)</label><input id="product-base-price" type="number"></div>
     <div class="form-group">
       <label>Image URL</label>
@@ -100,6 +104,17 @@ let allOrders = [];
 function adminHeaders() {
   return { 'X-Admin-Pin': getAdminPin() };
 }
+
+function populateCategorySelect() {
+  const select = document.getElementById('product-category');
+  select.innerHTML = CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join('')
+    + '<option value="__other__">Other (type new)</option>';
+  select.addEventListener('change', () => {
+    const otherInput = document.getElementById('product-category-other');
+    otherInput.style.display = select.value === '__other__' ? 'block' : 'none';
+  });
+}
+populateCategorySelect();
 
 document.getElementById('pin-submit').addEventListener('click', unlockAdmin);
 document.getElementById('pin-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockAdmin(); });
@@ -230,7 +245,20 @@ function openModal(productId) {
   document.getElementById('product-id').value = product ? product.id : '';
   document.getElementById('product-name').value = product ? product.name : '';
   document.getElementById('product-description').value = product ? product.description : '';
-  document.getElementById('product-category').value = product ? product.category : 'Phones';
+  document.getElementById('product-category').value = 'Phones';
+  document.getElementById('product-category-other').style.display = 'none';
+  document.getElementById('product-category-other').value = '';
+  if (product) {
+    const select = document.getElementById('product-category');
+    const knownCategory = CATEGORIES.includes(product.category);
+    if (knownCategory) {
+      select.value = product.category;
+    } else {
+      select.value = '__other__';
+      document.getElementById('product-category-other').style.display = 'block';
+      document.getElementById('product-category-other').value = product.category;
+    }
+  }
   document.getElementById('product-base-price').value = product ? product.base_price : '';
   document.getElementById('product-image').value = product ? product.image_url : '';
 
@@ -288,7 +316,9 @@ document.getElementById('save-product-btn').addEventListener('click', async () =
   const payload = {
     name,
     description: document.getElementById('product-description').value.trim(),
-    category: document.getElementById('product-category').value.trim() || 'Phones',
+    category: document.getElementById('product-category').value === '__other__'
+      ? document.getElementById('product-category-other').value.trim() || 'Phones'
+      : document.getElementById('product-category').value,
     base_price,
     image_url: document.getElementById('product-image').value.trim(),
     variants: variantRows
