@@ -31,6 +31,8 @@
 let product = null;
 let selectedColor = null;
 let selectedStorage = null;
+let availableAddons = [];
+let selectedAddonVariantId = null;
 
 function currentVariant() {
   if (!product.variants.length) return null;
@@ -46,10 +48,34 @@ function render() {
   const variant = currentVariant();
   const price = variant ? variant.price : product.base_price;
   const stock = variant ? variant.stock_qty : product.variants.reduce((s, v) => s + v.stock_qty, 0);
+  const storageLabel = product.is_digital ? 'Denomination' : 'Storage';
+
+  const galleryContent = product.is_digital
+    ? `<div class="gift-card-visual">
+         <div class="gc-logo">EMGOVI</div>
+         <div class="gc-amount">${formatNaira(price)}</div>
+         <div class="gc-label">Digital Gift Card</div>
+       </div>`
+    : (product.image_url ? `<img src="${product.image_url}" alt="${product.name}">` : '');
+
+  const addonBlock = availableAddons.length ? availableAddons.map(addon => `
+    <div class="option-group">
+      <label>${addon.name}</label>
+      <p style="font-size:13px; color:var(--text-secondary); margin:0 0 10px;">${addon.description || ''}</p>
+      <div class="denomination-grid">
+        <button class="denomination-pill ${selectedAddonVariantId === null ? 'selected' : ''}" data-addon-variant="none">No thanks</button>
+        ${addon.variants.map(v => `
+          <button class="denomination-pill ${selectedAddonVariantId === v.id ? 'selected' : ''}" data-addon-variant="${v.id}" data-addon-price="${v.price}">
+            ${v.storage || v.color}<br><span style="font-weight:400; font-size:12px;">${formatNaira(v.price)}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('') : '';
 
   document.getElementById('content').innerHTML = `
     <div class="gallery">
-      ${product.image_url ? `<img src="${product.image_url}" alt="${product.name}">` : ''}
+      ${galleryContent}
     </div>
     <div class="buy-box">
       <h1>${product.name}</h1>
@@ -67,9 +93,9 @@ function render() {
 
       ${storages.length ? `
         <div class="option-group">
-          <label>Storage</label>
-          <div class="option-pills" id="storage-pills">
-            ${storages.map(s => `<button class="option-pill ${s === selectedStorage ? 'selected' : ''}" data-storage="${s}">${s}</button>`).join('')}
+          <label>${storageLabel}</label>
+          <div class="${product.is_digital ? 'denomination-grid' : 'option-pills'}" id="storage-pills">
+            ${storages.map(s => `<button class="${product.is_digital ? 'denomination-pill' : 'option-pill'} ${s === selectedStorage ? 'selected' : ''}" data-storage="${s}">${s}</button>`).join('')}
           </div>
         </div>` : ''}
 
@@ -82,9 +108,12 @@ function render() {
         </div>
       </div>
 
+      ${addonBlock}
+
       <button id="add-to-cart" class="btn btn-primary btn-block" ${!variant || stock <= 0 ? 'disabled' : ''}>
         ${!variant ? 'Select options' : stock <= 0 ? 'Out of stock' : 'Add to cart'}
       </button>
+      ${product.is_digital ? `<p style="color:var(--text-secondary); font-size:13px; margin-top:12px;">Delivered by email instantly after payment. No shipping required.</p>` : ''}
     </div>
   `;
 
@@ -95,8 +124,14 @@ function attachHandlers() {
   document.querySelectorAll('#color-pills .option-pill').forEach(btn => {
     btn.addEventListener('click', () => { selectedColor = btn.dataset.color; render(); });
   });
-  document.querySelectorAll('#storage-pills .option-pill').forEach(btn => {
+  document.querySelectorAll('#storage-pills .option-pill, #storage-pills .denomination-pill').forEach(btn => {
     btn.addEventListener('click', () => { selectedStorage = btn.dataset.storage; render(); });
+  });
+  document.querySelectorAll('[data-addon-variant]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedAddonVariantId = btn.dataset.addonVariant === 'none' ? null : parseInt(btn.dataset.addonVariant, 10);
+      render();
+    });
   });
 
   let qty = parseInt(document.getElementById('qty-value').textContent, 10);
@@ -121,7 +156,24 @@ function attachHandlers() {
         price: variant.price,
         quantity: qty,
         image_url: product.image_url,
+        is_digital: !!product.is_digital,
       });
+
+      if (selectedAddonVariantId !== null) {
+        const addonVariant = availableAddons.flatMap(a => a.variants.map(v => ({ ...v, addonName: a.name }))).find(v => v.id === selectedAddonVariantId);
+        if (addonVariant) {
+          addToCart({
+            variant_id: addonVariant.id,
+            product_name: addonVariant.addonName,
+            variant_label: addonVariant.storage || addonVariant.color || '',
+            price: addonVariant.price,
+            quantity: qty,
+            image_url: '',
+            is_digital: true,
+          });
+        }
+      }
+
       addBtn.textContent = 'Added ✓';
       setTimeout(() => { addBtn.textContent = 'Add to cart'; }, 1200);
     });
@@ -142,6 +194,16 @@ async function loadProduct() {
       selectedColor = product.variants[0].color || null;
       selectedStorage = product.variants[0].storage || null;
     }
+
+    if (!product.is_addon) {
+      try {
+        const allProducts = await fetchJSON('/api/products');
+        availableAddons = allProducts.filter(p => p.is_addon && p.addon_for_category === product.category);
+      } catch {
+        availableAddons = [];
+      }
+    }
+
     render();
   } catch (err) {
     document.getElementById('content').innerHTML = `<p>${err.message}</p>`;
