@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS products (
   category TEXT NOT NULL DEFAULT 'Phones',
   base_price INTEGER NOT NULL,
   image_url TEXT,
+  is_digital INTEGER NOT NULL DEFAULT 0,
+  delivers_code INTEGER NOT NULL DEFAULT 0,
+  is_addon INTEGER NOT NULL DEFAULT 0,
+  addon_for_category TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -59,6 +63,14 @@ CREATE TABLE IF NOT EXISTS order_items (
   price INTEGER NOT NULL,
   quantity INTEGER NOT NULL,
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS gift_card_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_item_id INTEGER NOT NULL,
+  code TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE
 );
 
 -- Order status values used by the admin panel, in order:
