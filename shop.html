@@ -51,10 +51,13 @@ function renderGrid(products) {
     const minPrice = (p.variants || []).length
       ? Math.min(...p.variants.map((v) => v.price))
       : p.base_price;
+    const thumbContent = p.is_digital
+      ? `<div class="gift-card-visual small"><div class="gc-logo">EMGOVI</div><div class="gc-amount">${formatNaira(minPrice)}</div><div class="gc-label">Gift Card</div></div>`
+      : (p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : '');
     return `
       <a class="product-card" href="product.html?id=${p.id}">
         <div class="thumb">
-          ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : ''}
+          ${thumbContent}
         </div>
         <div class="info">
           <div class="name">${p.name}</div>
@@ -90,7 +93,8 @@ async function loadShop() {
 
   try {
     const url = category ? `/api/products?category=${encodeURIComponent(category)}` : '/api/products';
-    allProducts = await fetchJSON(url);
+    const fetched = await fetchJSON(url);
+    allProducts = fetched.filter((p) => !p.is_addon);
     applySearch(search);
   } catch (err) {
     console.error(err);
