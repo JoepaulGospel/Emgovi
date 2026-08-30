@@ -19,8 +19,8 @@ module.exports = async (req, res) => {
       res.status(400).json({ error: 'Your cart is empty.' });
       return;
     }
-    if (!delivery_address || !phone) {
-      res.status(400).json({ error: 'Delivery address and phone are required.' });
+    if (!phone) {
+      res.status(400).json({ error: 'A phone number is required.' });
       return;
     }
 
@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
     for (const item of items) {
       const variantResult = await db.execute({
         sql: `SELECT variants.id, variants.price, variants.stock_qty, variants.color, variants.storage,
-                     products.name as product_name
+                     products.name as product_name, products.is_digital, products.delivers_code
               FROM variants JOIN products ON products.id = variants.product_id
               WHERE variants.id = ?`,
         args: [item.variant_id],
@@ -60,8 +60,17 @@ module.exports = async (req, res) => {
         variant_label: [variant.color, variant.storage].filter(Boolean).join(' / '),
         price: variant.price,
         quantity,
+        is_digital: !!variant.is_digital,
+        delivers_code: !!variant.delivers_code,
       });
     }
+
+    const hasPhysicalItems = verifiedItems.some((i) => !i.is_digital);
+    if (hasPhysicalItems && !delivery_address) {
+      res.status(400).json({ error: 'Delivery address is required for the physical items in your cart.' });
+      return;
+    }
+    const finalAddress = delivery_address || 'No delivery needed (digital order)';
 
     // Stash the verified cart under a reference so paystack-verify.js can
     // rebuild the exact same order after payment succeeds.
@@ -69,7 +78,7 @@ module.exports = async (req, res) => {
     const pendingOrder = JSON.stringify({
       user_id: user.id,
       total,
-      delivery_address,
+      delivery_address: finalAddress,
       phone,
       items: verifiedItems,
     });
