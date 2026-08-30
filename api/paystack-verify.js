@@ -1,4 +1,16 @@
 const { getDb } = require('../lib/db');
+const { sendEmail, orderConfirmationEmail } = require('../lib/email');
+
+function generateGiftCardCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous 0/O, 1/I
+  const blocks = [];
+  for (let b = 0; b < 4; b++) {
+    let block = '';
+    for (let i = 0; i < 4; i++) block += chars[Math.floor(Math.random() * chars.length)];
+    blocks.push(block);
+  }
+  return blocks.join('-');
+}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -60,18 +72,56 @@ module.exports = async (req, res) => {
     });
     const orderId = Number(orderResult.lastInsertRowid);
 
+    const allGiftCardCodes = [];
+    let hasPhysicalItems = false;
+
     for (const item of pending.items) {
-      await db.execute({
+      const itemResult = await db.execute({
         sql: 'INSERT INTO order_items (order_id, variant_id, product_name, variant_label, price, quantity) VALUES (?, ?, ?, ?, ?, ?)',
         args: [orderId, item.variant_id, item.product_name, item.variant_label, item.price, item.quantity],
       });
+      const orderItemId = Number(itemResult.lastInsertRowid);
+
       await db.execute({
         sql: 'UPDATE variants SET stock_qty = stock_qty - ? WHERE id = ?',
         args: [item.quantity, item.variant_id],
       });
+
+      if (item.delivers_code) {
+        for (let i = 0; i < item.quantity; i++) {
+          const code = generateGiftCardCode();
+          await db.execute({
+            sql: 'INSERT INTO gift_card_codes (order_item_id, code) VALUES (?, ?)',
+            args: [orderItemId, code],
+          });
+          allGiftCardCodes.push(code);
+        }
+      }
+      if (!item.is_digital) {
+        hasPhysicalItems = true;
+      }
     }
 
     await db.execute({ sql: 'DELETE FROM pending_orders WHERE reference = ?', args: [reference] });
+
+    // Email the receipt (and any gift card codes) to the buyer. A failure here
+    // should never block the order itself, the payment already succeeded.
+    try {
+      const userResult = await db.execute({ sql: 'SELECT email FROM users WHERE id = ?', args: [pending.user_id] });
+      if (userResult.rows.length > 0) {
+        const html = orderConfirmationEmail({
+          orderId,
+          items: pending.items,
+          total: pending.total,
+          deliveryAddress: pending.delivery_address,
+          hasPhysicalItems,
+          giftCards: allGiftCardCodes,
+        });
+        await sendEmail(userResult.rows[0].email, `EMGOVI Order Confirmation #${orderId}`, html);
+      }
+    } catch (emailErr) {
+      console.error('Order confirmation email failed:', emailErr);
+    }
 
     res.status(200).json({ order_id: orderId, already_processed: false });
   } catch (err) {
