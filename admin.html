@@ -80,12 +80,29 @@
       <input id="product-category-other" type="text" placeholder="Type new category name" style="display:none; margin-top:8px;">
     </div>
     <div class="form-group"><label>Base price (₦)</label><input id="product-base-price" type="number"></div>
+    <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+      <input id="product-is-digital" type="checkbox" style="width:auto;">
+      <label style="margin:0;" for="product-is-digital">Digital product (e.g. gift card, protection plan) — no shipping required</label>
+    </div>
+    <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+      <input id="product-delivers-code" type="checkbox" style="width:auto;">
+      <label style="margin:0;" for="product-delivers-code">Delivers a redemption code by email (e.g. gift cards — leave unchecked for protection plans)</label>
+    </div>
+    <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+      <input id="product-is-addon" type="checkbox" style="width:auto;">
+      <label style="margin:0;" for="product-is-addon">This is an add-on (e.g. a protection plan) — hidden from the shop, offered on product pages instead</label>
+    </div>
+    <div class="form-group" id="addon-category-group" style="display:none;">
+      <label>Offer this add-on on product pages in category</label>
+      <select id="product-addon-for-category"></select>
+    </div>
     <div class="form-group">
       <label>Image URL</label>
-      <input id="product-image" type="text" placeholder="Paste a hosted image link">
+      <input id="product-image" type="text" placeholder="Paste a hosted image link (not needed for gift cards or protection plans)">
     </div>
 
     <label style="font-size:13px; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Variants (color / storage / price / stock)</label>
+    <p style="font-size:12px; color:var(--text-secondary); margin:4px 0 12px;">For gift cards or protection plans: leave Color blank, use Storage for the label (e.g. "₦5,000" or "6 months"), and set Price to match.</p>
     <div id="variants-list" style="margin:12px 0;"></div>
     <button id="add-variant-btn" class="btn btn-secondary" style="margin-bottom:20px;">+ Add variant</button>
 
@@ -112,6 +129,14 @@ function populateCategorySelect() {
   select.addEventListener('change', () => {
     const otherInput = document.getElementById('product-category-other');
     otherInput.style.display = select.value === '__other__' ? 'block' : 'none';
+  });
+
+  const addonCategorySelect = document.getElementById('product-addon-for-category');
+  addonCategorySelect.innerHTML = CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join('');
+
+  const isAddonCheckbox = document.getElementById('product-is-addon');
+  isAddonCheckbox.addEventListener('change', () => {
+    document.getElementById('addon-category-group').style.display = isAddonCheckbox.checked ? 'block' : 'none';
   });
 }
 populateCategorySelect();
@@ -162,7 +187,7 @@ async function loadProducts() {
     const totalStock = (p.variants || []).reduce((s, v) => s + v.stock_qty, 0);
     return `
       <tr>
-        <td>${p.name}</td>
+        <td>${p.name}${p.is_digital ? ' <span class="badge badge-in-stock" style="margin-left:4px;">Digital</span>' : ''}</td>
         <td>${p.category}</td>
         <td>${formatNaira(p.base_price)}</td>
         <td>${totalStock}</td>
@@ -261,6 +286,11 @@ function openModal(productId) {
   }
   document.getElementById('product-base-price').value = product ? product.base_price : '';
   document.getElementById('product-image').value = product ? product.image_url : '';
+  document.getElementById('product-is-digital').checked = product ? !!product.is_digital : false;
+  document.getElementById('product-delivers-code').checked = product ? !!product.delivers_code : false;
+  document.getElementById('product-is-addon').checked = product ? !!product.is_addon : false;
+  document.getElementById('addon-category-group').style.display = (product && product.is_addon) ? 'block' : 'none';
+  document.getElementById('product-addon-for-category').value = (product && product.addon_for_category) ? product.addon_for_category : CATEGORIES[0];
 
   variantRows = product && product.variants.length
     ? product.variants.map(v => ({ color: v.color, storage: v.storage, price: v.price, stock_qty: v.stock_qty, sku: v.sku }))
@@ -313,6 +343,7 @@ document.getElementById('save-product-btn').addEventListener('click', async () =
     return;
   }
 
+  const isAddon = document.getElementById('product-is-addon').checked;
   const payload = {
     name,
     description: document.getElementById('product-description').value.trim(),
@@ -321,6 +352,10 @@ document.getElementById('save-product-btn').addEventListener('click', async () =
       : document.getElementById('product-category').value,
     base_price,
     image_url: document.getElementById('product-image').value.trim(),
+    is_digital: document.getElementById('product-is-digital').checked,
+    delivers_code: document.getElementById('product-delivers-code').checked,
+    is_addon: isAddon,
+    addon_for_category: isAddon ? document.getElementById('product-addon-for-category').value : null,
     variants: variantRows
       .filter(v => v.price)
       .map(v => ({
