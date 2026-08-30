@@ -27,6 +27,28 @@
 </section>
 
 <div class="container section">
+  <h2 style="font-size:22px; margin-bottom:20px;">Shop by category</h2>
+  <div class="category-feature-grid">
+    <a class="category-feature-card" href="shop.html?category=Phones">
+      <div class="cf-title">Phones</div>
+      <div class="cf-cta">Shop now →</div>
+    </a>
+    <a class="category-feature-card" href="shop.html?category=Gift%20Cards">
+      <div class="cf-title">Gift Cards</div>
+      <div class="cf-cta">Give instantly →</div>
+    </a>
+    <a class="category-feature-card" href="shop.html?category=Chargers">
+      <div class="cf-title">Chargers</div>
+      <div class="cf-cta">Shop now →</div>
+    </a>
+    <a class="category-feature-card" href="shop.html?category=Power%20Banks">
+      <div class="cf-title">Power Banks</div>
+      <div class="cf-cta">Shop now →</div>
+    </a>
+  </div>
+</div>
+
+<div class="container section">
   <h2 style="font-size:22px; margin-bottom:20px;">Latest arrivals</h2>
   <div id="featured-grid" class="product-grid"></div>
   <div id="empty-state" class="empty-state" style="display:none;">
@@ -41,7 +63,8 @@
 <script>
 async function loadFeatured() {
   try {
-    const products = await fetchJSON('/api/products');
+    const fetched = await fetchJSON('/api/products');
+    const products = fetched.filter((p) => !p.is_addon);
     const grid = document.getElementById('featured-grid');
     const empty = document.getElementById('empty-state');
 
@@ -55,10 +78,13 @@ async function loadFeatured() {
       const minPrice = (p.variants || []).length
         ? Math.min(...p.variants.map((v) => v.price))
         : p.base_price;
+      const thumbContent = p.is_digital
+        ? `<div class="gift-card-visual small"><div class="gc-logo">EMGOVI</div><div class="gc-amount">${formatNaira(minPrice)}</div><div class="gc-label">Gift Card</div></div>`
+        : (p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : '');
       return `
         <a class="product-card" href="product.html?id=${p.id}">
           <div class="thumb">
-            ${p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : ''}
+            ${thumbContent}
           </div>
           <div class="info">
             <div class="name">${p.name}</div>
