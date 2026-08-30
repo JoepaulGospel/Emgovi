@@ -49,15 +49,15 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { name, description, category, base_price, image_url, variants } = req.body;
+      const { name, description, category, base_price, image_url, is_digital, delivers_code, is_addon, addon_for_category, variants } = req.body;
       if (!name || !base_price) {
         res.status(400).json({ error: 'Name and base price are required.' });
         return;
       }
 
       const result = await db.execute({
-        sql: 'INSERT INTO products (name, description, category, base_price, image_url) VALUES (?, ?, ?, ?, ?)',
-        args: [name, description || '', category || 'Phones', base_price, image_url || ''],
+        sql: 'INSERT INTO products (name, description, category, base_price, image_url, is_digital, delivers_code, is_addon, addon_for_category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        args: [name, description || '', category || 'Phones', base_price, image_url || '', is_digital ? 1 : 0, delivers_code ? 1 : 0, is_addon ? 1 : 0, addon_for_category || null],
       });
       const productId = Number(result.lastInsertRowid);
 
@@ -75,15 +75,15 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'PUT') {
-      const { id, name, description, category, base_price, image_url, variants } = req.body;
+      const { id, name, description, category, base_price, image_url, is_digital, delivers_code, is_addon, addon_for_category, variants } = req.body;
       if (!id) {
         res.status(400).json({ error: 'Product id is required.' });
         return;
       }
 
       await db.execute({
-        sql: 'UPDATE products SET name = ?, description = ?, category = ?, base_price = ?, image_url = ? WHERE id = ?',
-        args: [name, description || '', category, base_price, image_url || '', id],
+        sql: 'UPDATE products SET name = ?, description = ?, category = ?, base_price = ?, image_url = ?, is_digital = ?, delivers_code = ?, is_addon = ?, addon_for_category = ? WHERE id = ?',
+        args: [name, description || '', category, base_price, image_url || '', is_digital ? 1 : 0, delivers_code ? 1 : 0, is_addon ? 1 : 0, addon_for_category || null, id],
       });
 
       if (Array.isArray(variants)) {
