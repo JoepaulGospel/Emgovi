@@ -32,6 +32,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="overview">Overview</button>
       <button class="tab-btn" data-tab="products">Products</button>
+      <button class="tab-btn" data-tab="giftcards">Gift Cards</button>
       <button class="tab-btn" data-tab="orders">Orders</button>
     </div>
 
@@ -55,6 +56,10 @@
         <thead><tr><th>Name</th><th>Category</th><th>Base price</th><th>Total stock</th><th></th></tr></thead>
         <tbody id="products-tbody"></tbody>
       </table>
+    </div>
+
+    <div id="giftcards" class="tab-panel">
+      <div id="giftcards-content"></div>
     </div>
 
     <div id="orders" class="tab-panel">
@@ -82,11 +87,11 @@
     <div class="form-group"><label>Base price (₦)</label><input id="product-base-price" type="number"></div>
     <div class="form-group" style="display:flex; align-items:center; gap:8px;">
       <input id="product-is-digital" type="checkbox" style="width:auto;">
-      <label style="margin:0;" for="product-is-digital">Digital product (e.g. gift card, protection plan) — no shipping required</label>
+      <label style="margin:0;" for="product-is-digital">Digital product (e.g. protection plan) — no shipping required</label>
     </div>
     <div class="form-group" style="display:flex; align-items:center; gap:8px;">
       <input id="product-delivers-code" type="checkbox" style="width:auto;">
-      <label style="margin:0;" for="product-delivers-code">Delivers a redemption code by email (e.g. gift cards — leave unchecked for protection plans)</label>
+      <label style="margin:0;" for="product-delivers-code">Delivers a redemption code by email</label>
     </div>
     <div class="form-group" style="display:flex; align-items:center; gap:8px;">
       <input id="product-is-addon" type="checkbox" style="width:auto;">
@@ -98,11 +103,11 @@
     </div>
     <div class="form-group">
       <label>Image URL</label>
-      <input id="product-image" type="text" placeholder="Paste a hosted image link (not needed for gift cards or protection plans)">
+      <input id="product-image" type="text" placeholder="Paste a hosted image link">
     </div>
 
     <label style="font-size:13px; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Variants (color / storage / price / stock)</label>
-    <p style="font-size:12px; color:var(--text-secondary); margin:4px 0 12px;">For gift cards or protection plans: leave Color blank, use Storage for the label (e.g. "₦5,000" or "6 months"), and set Price to match.</p>
+    <p style="font-size:12px; color:var(--text-secondary); margin:4px 0 12px;">For a protection plan: leave Color blank, use Storage for the label (e.g. "6 months"), and set Price to match.</p>
     <div id="variants-list" style="margin:12px 0;"></div>
     <button id="add-variant-btn" class="btn btn-secondary" style="margin-bottom:20px;">+ Add variant</button>
 
@@ -123,8 +128,9 @@ function adminHeaders() {
 }
 
 function populateCategorySelect() {
+  const adminCategories = CATEGORIES.filter((c) => c !== 'Gift Cards');
   const select = document.getElementById('product-category');
-  select.innerHTML = CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join('')
+  select.innerHTML = adminCategories.map((c) => `<option value="${c}">${c}</option>`).join('')
     + '<option value="__other__">Other (type new)</option>';
   select.addEventListener('change', () => {
     const otherInput = document.getElementById('product-category-other');
@@ -132,7 +138,7 @@ function populateCategorySelect() {
   });
 
   const addonCategorySelect = document.getElementById('product-addon-for-category');
-  addonCategorySelect.innerHTML = CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join('');
+  addonCategorySelect.innerHTML = adminCategories.map((c) => `<option value="${c}">${c}</option>`).join('');
 
   const isAddonCheckbox = document.getElementById('product-is-addon');
   isAddonCheckbox.addEventListener('change', () => {
@@ -148,9 +154,7 @@ async function unlockAdmin() {
   const pin = document.getElementById('pin-input').value.trim();
   setAdminPin(pin);
   try {
-    // Cheap way to validate the PIN: try a write-gated call with no changes.
     const res = await fetch('/api/products', { method: 'GET', headers: adminHeaders() });
-    // GET doesn't check the PIN, so verify by attempting the orders admin view instead.
     const ordersRes = await fetch('/api/orders', { headers: adminHeaders() });
     if (ordersRes.status === 401) {
       document.getElementById('pin-error').textContent = 'Incorrect PIN.';
@@ -178,12 +182,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 async function loadAll() {
   await Promise.all([loadProducts(), loadOrders()]);
   renderOverview();
+  renderGiftCardsTab();
 }
 
 async function loadProducts() {
   allProducts = await fetchJSON('/api/products');
   const tbody = document.getElementById('products-tbody');
-  tbody.innerHTML = allProducts.map(p => {
+  tbody.innerHTML = allProducts.filter(p => p.category !== 'Gift Cards').map(p => {
     const totalStock = (p.variants || []).reduce((s, v) => s + v.stock_qty, 0);
     return `
       <tr>
@@ -386,6 +391,147 @@ async function deleteProduct(id) {
   await fetchJSON(`/api/products?id=${id}`, { method: 'DELETE', headers: adminHeaders() });
   await loadProducts();
   renderOverview();
+}
+
+// ---------- Gift Cards tab: a dedicated, simplified editor ----------
+let giftCardDenomRows = [];
+
+function findGiftCardProduct() {
+  return allProducts.find(p => p.category === 'Gift Cards');
+}
+
+function renderGiftCardsTab() {
+  const container = document.getElementById('giftcards-content');
+  const gc = findGiftCardProduct();
+
+  if (!gc) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <h2>No gift card set up yet</h2>
+        <p>Create it once with starter amounts, then manage everything here from now on, just amounts and prices.</p>
+        <button id="create-giftcard-btn" class="btn btn-primary" style="margin-top:16px;">Create Gift Card</button>
+      </div>
+    `;
+    document.getElementById('create-giftcard-btn').addEventListener('click', createGiftCardProduct);
+    return;
+  }
+
+  giftCardDenomRows = gc.variants.map(v => ({ storage: v.storage, price: v.price, stock_qty: v.stock_qty }));
+
+  container.innerHTML = `
+    <h2 style="font-size:18px; margin-bottom:4px;">Gift Card amounts</h2>
+    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Add, edit, or remove the amounts customers can buy. Nothing else about gift cards needs any setup.</p>
+    <div id="giftcard-error" class="form-error"></div>
+    <table class="admin-table">
+      <thead><tr><th>Label (shown to customer)</th><th>Price (₦)</th><th>Stock</th><th></th></tr></thead>
+      <tbody id="giftcard-rows-tbody"></tbody>
+    </table>
+    <button id="add-giftcard-row-btn" class="btn btn-secondary" style="margin-top:16px;">+ Add amount</button>
+    <button id="save-giftcards-btn" class="btn btn-primary" style="margin-top:16px; margin-left:8px;">Save changes</button>
+  `;
+
+  renderGiftCardRows();
+
+  document.getElementById('add-giftcard-row-btn').addEventListener('click', () => {
+    giftCardDenomRows.push({ storage: '', price: '', stock_qty: 999 });
+    renderGiftCardRows();
+  });
+
+  document.getElementById('save-giftcards-btn').addEventListener('click', () => saveGiftCards(gc));
+}
+
+function renderGiftCardRows() {
+  document.getElementById('giftcard-rows-tbody').innerHTML = giftCardDenomRows.map((v, i) => `
+    <tr>
+      <td><input data-idx="${i}" data-field="storage" value="${v.storage || ''}" placeholder="e.g. $100" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;"></td>
+      <td><input type="number" data-idx="${i}" data-field="price" value="${v.price || ''}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;"></td>
+      <td><input type="number" data-idx="${i}" data-field="stock_qty" value="${v.stock_qty || 999}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;"></td>
+      <td><button class="remove-giftcard-row-btn" data-idx="${i}" style="background:none; border:none; color:var(--danger); font-size:18px;">×</button></td>
+    </tr>
+  `).join('');
+
+  document.querySelectorAll('#giftcard-rows-tbody input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      giftCardDenomRows[inp.dataset.idx][inp.dataset.field] = inp.value;
+    });
+  });
+  document.querySelectorAll('.remove-giftcard-row-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      giftCardDenomRows.splice(parseInt(btn.dataset.idx, 10), 1);
+      renderGiftCardRows();
+    });
+  });
+}
+
+async function saveGiftCards(gc) {
+  const errorEl = document.getElementById('giftcard-error');
+  errorEl.classList.remove('visible');
+
+  const variants = giftCardDenomRows
+    .filter(v => v.price)
+    .map(v => ({ color: '', storage: v.storage, price: parseInt(v.price, 10), stock_qty: parseInt(v.stock_qty, 10) || 999 }));
+
+  if (variants.length === 0) {
+    errorEl.textContent = 'Add at least one amount with a price.';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  try {
+    await fetchJSON('/api/products', {
+      method: 'PUT',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        id: gc.id,
+        name: gc.name,
+        description: gc.description,
+        category: 'Gift Cards',
+        base_price: variants[0].price,
+        image_url: gc.image_url,
+        is_digital: true,
+        delivers_code: true,
+        is_addon: false,
+        addon_for_category: null,
+        variants,
+      }),
+    });
+    await loadProducts();
+    renderGiftCardsTab();
+    renderOverview();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.add('visible');
+  }
+}
+
+async function createGiftCardProduct() {
+  try {
+    await fetchJSON('/api/products', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        name: 'EMGOVI Gift Card',
+        description: 'Give the gift of choice. Delivered instantly by email as a redeemable code, no shipping required.',
+        category: 'Gift Cards',
+        base_price: 135000,
+        image_url: '',
+        is_digital: true,
+        delivers_code: true,
+        is_addon: false,
+        addon_for_category: null,
+        variants: [
+          { color: '', storage: '$100', price: 135000, stock_qty: 999 },
+          { color: '', storage: '$200', price: 270000, stock_qty: 999 },
+          { color: '', storage: '$500', price: 675000, stock_qty: 999 },
+        ],
+      }),
+    });
+    await loadProducts();
+    renderGiftCardsTab();
+    renderOverview();
+  } catch (err) {
+    alert(err.message);
+  }
 }
 </script>
 </body>
