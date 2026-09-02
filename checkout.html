@@ -53,17 +53,25 @@ async function init() {
 }
 
 function renderForm(user, cart) {
+  const allDigital = cart.every(i => i.is_digital);
+  renderCheckoutBody(user, cart, allDigital);
+  attachUpsell(user);
+}
+
+function renderCheckoutBody(user, cart, allDigital) {
   document.getElementById('checkout-content').innerHTML = `
     <h1 style="font-size:26px; margin-bottom:24px;">Checkout</h1>
     <div class="cart-summary" style="margin-bottom:24px;">
       ${cart.map(i => `<div class="row"><span>${i.product_name} (${i.variant_label || ''}) × ${i.quantity}</span><span>${formatNaira(i.price * i.quantity)}</span></div>`).join('')}
       <div class="row total"><span>Total</span><span>${formatNaira(cartTotal())}</span></div>
     </div>
+    <div id="addon-upsell"></div>
     <div id="form-error" class="form-error"></div>
+    ${allDigital ? `<p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">This order is fully digital, your gift card code will be emailed to you right after payment. No delivery address needed.</p>` : `
     <div class="form-group">
       <label>Delivery address</label>
       <textarea id="address" rows="3" placeholder="Street, area, city, state"></textarea>
-    </div>
+    </div>`}
     <div class="form-group">
       <label>Phone number</label>
       <input id="phone" type="tel" placeholder="e.g. 08012345678" value="${user.phone || ''}">
@@ -72,13 +80,15 @@ function renderForm(user, cart) {
   `;
 
   document.getElementById('pay-btn').addEventListener('click', async () => {
-    const address = document.getElementById('address').value.trim();
+    const address = allDigital ? '' : document.getElementById('address').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const errorEl = document.getElementById('form-error');
     errorEl.classList.remove('visible');
 
-    if (!address || !phone) {
-      errorEl.textContent = 'Please fill in your delivery address and phone number.';
+    if (!phone || (!allDigital && !address)) {
+      errorEl.textContent = allDigital
+        ? 'Please enter your phone number.'
+        : 'Please fill in your delivery address and phone number.';
       errorEl.classList.add('visible');
       return;
     }
@@ -88,10 +98,11 @@ function renderForm(user, cart) {
     payBtn.textContent = 'Starting payment…';
 
     try {
+      const freshCart = getCart();
       const data = await fetchJSON('/api/paystack-init', {
         method: 'POST',
         body: JSON.stringify({
-          items: cart.map(i => ({ variant_id: i.variant_id, quantity: i.quantity })),
+          items: freshCart.map(i => ({ variant_id: i.variant_id, quantity: i.quantity })),
           delivery_address: address,
           phone,
         }),
@@ -104,6 +115,65 @@ function renderForm(user, cart) {
       payBtn.textContent = `Pay ${formatNaira(cartTotal())} with Paystack`;
     }
   });
+}
+
+// Last-chance offer: if the cart has a physical item (like a phone) in a
+// category that has an add-on (like the Protection Plan) and that add-on
+// isn't in the cart yet, show it here so it's not only ever seen once on
+// the product page.
+async function attachUpsell(user) {
+  const cart = getCart();
+  const cartCategories = [...new Set(cart.map(i => i.category).filter(Boolean))];
+  if (cartCategories.length === 0) return;
+
+  try {
+    const allProducts = await fetchJSON('/api/products');
+    const cartVariantIds = new Set(cart.map(i => i.variant_id));
+
+    const relevantAddons = allProducts.filter(p =>
+      p.is_addon &&
+      cartCategories.includes(p.addon_for_category) &&
+      !p.variants.some(v => cartVariantIds.has(v.id))
+    );
+
+    if (relevantAddons.length === 0) return;
+
+    const upsellEl = document.getElementById('addon-upsell');
+    upsellEl.innerHTML = relevantAddons.map(addon => `
+      <div class="option-group" style="background:var(--bg-alt); border-radius:var(--radius-md); padding:16px; margin-bottom:16px;">
+        <label style="margin-bottom:2px;">Before you pay: add ${addon.name}?</label>
+        <p style="font-size:13px; color:var(--text-secondary); margin:0 0 10px;">${addon.description || ''}</p>
+        <div class="denomination-grid">
+          ${addon.variants.map(v => `
+            <button class="denomination-pill upsell-add-btn" data-variant-id="${v.id}" data-product-name="${addon.name}" data-label="${v.storage || v.color || ''}" data-price="${v.price}">
+              ${v.storage || v.color}<br><span style="font-weight:400; font-size:12px;">${formatNaira(v.price)}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.upsell-add-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        addToCart({
+          variant_id: parseInt(btn.dataset.variantId, 10),
+          product_name: btn.dataset.productName,
+          variant_label: btn.dataset.label,
+          price: parseInt(btn.dataset.price, 10),
+          quantity: 1,
+          image_url: '',
+          is_digital: true,
+          category: cartCategories[0],
+        });
+        const updatedCart = getCart();
+        const allDigital = updatedCart.every(i => i.is_digital);
+        renderCheckoutBody(user, updatedCart, allDigital);
+        attachUpsell(user);
+      });
+    });
+  } catch (err) {
+    console.error('Add-on upsell failed to load:', err);
+  }
 }
 
 async function handleVerification(reference) {
