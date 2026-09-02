@@ -157,6 +157,7 @@ function attachHandlers() {
         quantity: qty,
         image_url: product.image_url,
         is_digital: !!product.is_digital,
+        category: product.category,
       });
 
       if (selectedAddonVariantId !== null) {
@@ -170,6 +171,7 @@ function attachHandlers() {
             quantity: qty,
             image_url: '',
             is_digital: true,
+            category: product.category,
           });
         }
       }
