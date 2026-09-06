@@ -54,8 +54,9 @@ function renderGrid(products) {
     const thumbContent = p.is_digital
       ? `<div class="gift-card-visual small"><div class="gc-logo">EMGOVI</div><div class="gc-amount">${formatNaira(minPrice)}</div><div class="gc-label">Gift Card</div></div>`
       : (p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : '');
+    const href = p.category === 'Gift Cards' ? 'giftcard.html' : `product.html?id=${p.id}`;
     return `
-      <a class="product-card" href="product.html?id=${p.id}">
+      <a class="product-card" href="${href}">
         <div class="thumb">
           ${thumbContent}
         </div>
