@@ -40,7 +40,6 @@ button {
   cursor: pointer;
 }
 
-/* ---------- Header ---------- */
 .site-header {
   position: sticky;
   top: 0;
@@ -59,15 +58,6 @@ button {
   font-weight: 600;
   letter-spacing: -0.02em;
 }
-
-.site-header nav {
-  display: flex;
-  gap: 24px;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.site-header nav a:hover { color: var(--text); }
 
 .header-actions {
   display: flex;
@@ -98,9 +88,7 @@ button {
   color: var(--text);
 }
 
-.category-menu {
-  position: relative;
-}
+.category-menu { position: relative; }
 
 .category-menu-btn {
   background: none;
@@ -166,7 +154,6 @@ button {
   font-weight: 600;
 }
 
-/* ---------- Layout ---------- */
 .container {
   max-width: 1120px;
   margin: 0 auto;
@@ -175,7 +162,6 @@ button {
 
 .section { padding: 56px 0; }
 
-/* ---------- Hero ---------- */
 .hero {
   text-align: center;
   padding: 96px 24px 64px;
@@ -212,10 +198,175 @@ button {
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-secondary { background: var(--bg-alt); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { background: #EAEAEC; }
+.btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:disabled:active { transform: none; }
 .btn-block { width: 100%; }
 
-/* ---------- Product grid ---------- */
+.gift-card-visual {
+  width: 100%;
+  aspect-ratio: 1.6 / 1;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1D1D1F 0%, #3A3A3C 55%, #232325 100%);
+  color: #F5F5F7;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 28px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+  position: relative;
+  overflow: hidden;
+}
+
+.gift-card-visual::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gift-card-visual::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 70%;
+  height: 180%;
+  background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
+}
+
+.gift-card-visual .gc-logo {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-size: 13px;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.gift-card-visual .gc-amount {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.gift-card-visual .gc-label {
+  font-size: 12px;
+  opacity: 0.55;
+  letter-spacing: 0.03em;
+}
+
+.gift-card-visual.small {
+  padding: 14px;
+  border-radius: 16px;
+}
+
+.gift-card-visual.small .gc-logo { font-size: 10px; }
+.gift-card-visual.small .gc-amount { font-size: 20px; }
+.gift-card-visual.small .gc-label { font-size: 10px; }
+
+.gift-card-visual.hero {
+  max-width: 440px;
+  margin: 0 auto;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.4);
+}
+
+.gift-card-visual.hero .gc-amount { font-size: 44px; }
+
+.giftcard-hero {
+  background: linear-gradient(165deg, #0B0B0C 0%, #1D1D1F 55%, #2C2C2E 100%);
+  color: #F5F5F7;
+  text-align: center;
+  padding: 88px 24px 72px;
+}
+
+.giftcard-hero .eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-bottom: 14px;
+}
+
+.giftcard-hero h1 {
+  font-size: clamp(34px, 5.5vw, 58px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0 0 14px;
+}
+
+.giftcard-hero p {
+  font-size: 18px;
+  opacity: 0.7;
+  max-width: 480px;
+  margin: 0 auto 48px;
+}
+
+.giftcard-purchase {
+  max-width: 640px;
+  margin: -56px auto 0;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.08);
+  padding: 40px;
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 640px) {
+  .giftcard-purchase { padding: 24px; margin-top: -32px; }
+}
+
+.giftcard-perks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 48px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .giftcard-perks { grid-template-columns: 1fr; }
+}
+
+.giftcard-perks .perk-title {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.giftcard-perks .perk-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.denomination-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.denomination-pill {
+  padding: 16px 12px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.denomination-pill:hover { border-color: #B8B8BD; }
+.denomination-pill:active { transform: scale(0.97); }
+
+.denomination-pill.selected {
+  border-color: var(--text);
+  background: var(--text);
+  color: white;
+}
+
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -240,12 +391,13 @@ button {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .product-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.07);
+  border-color: #E4E4E7;
 }
 
 .product-card .thumb {
@@ -276,7 +428,6 @@ button {
 .product-card .name { font-size: 15px; font-weight: 600; }
 .product-card .price { font-size: 15px; color: var(--text-secondary); }
 
-/* ---------- Stock badges ---------- */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -292,7 +443,6 @@ button {
 .badge-low-stock { background: var(--warning-bg); color: var(--warning); }
 .badge-out-of-stock { background: var(--danger-bg); color: var(--danger); }
 
-/* ---------- Product detail ---------- */
 .product-detail {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -362,7 +512,6 @@ button {
 
 .option-pill:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* ---------- Forms ---------- */
 .form-group { margin-bottom: 16px; }
 
 .form-group label {
@@ -427,7 +576,6 @@ button {
 
 .form-footer a { color: var(--accent); font-weight: 500; }
 
-/* ---------- Cart ---------- */
 .cart-row {
   display: flex;
   align-items: center;
@@ -499,7 +647,6 @@ button {
   margin-top: 12px;
 }
 
-/* ---------- Admin ---------- */
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -579,7 +726,6 @@ button {
   background: var(--bg);
 }
 
-/* ---------- Empty states ---------- */
 .empty-state {
   text-align: center;
   padding: 64px 24px;
@@ -588,7 +734,6 @@ button {
 
 .empty-state h2 { color: var(--text); font-size: 20px; margin-bottom: 8px; }
 
-/* ---------- Footer ---------- */
 .site-footer {
   border-top: 1px solid var(--border);
   padding: 32px 24px;
