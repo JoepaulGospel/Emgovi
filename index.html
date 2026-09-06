@@ -27,28 +27,6 @@
 </section>
 
 <div class="container section">
-  <h2 style="font-size:22px; margin-bottom:20px;">Shop by category</h2>
-  <div class="category-feature-grid">
-    <a class="category-feature-card" href="shop.html?category=Phones">
-      <div class="cf-title">Phones</div>
-      <div class="cf-cta">Shop now →</div>
-    </a>
-    <a class="category-feature-card" href="shop.html?category=Gift%20Cards">
-      <div class="cf-title">Gift Cards</div>
-      <div class="cf-cta">Give instantly →</div>
-    </a>
-    <a class="category-feature-card" href="shop.html?category=Chargers">
-      <div class="cf-title">Chargers</div>
-      <div class="cf-cta">Shop now →</div>
-    </a>
-    <a class="category-feature-card" href="shop.html?category=Power%20Banks">
-      <div class="cf-title">Power Banks</div>
-      <div class="cf-cta">Shop now →</div>
-    </a>
-  </div>
-</div>
-
-<div class="container section">
   <h2 style="font-size:22px; margin-bottom:20px;">Latest arrivals</h2>
   <div id="featured-grid" class="product-grid"></div>
   <div id="empty-state" class="empty-state" style="display:none;">
@@ -81,8 +59,9 @@ async function loadFeatured() {
       const thumbContent = p.is_digital
         ? `<div class="gift-card-visual small"><div class="gc-logo">EMGOVI</div><div class="gc-amount">${formatNaira(minPrice)}</div><div class="gc-label">Gift Card</div></div>`
         : (p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : '');
+      const href = p.category === 'Gift Cards' ? 'giftcard.html' : `product.html?id=${p.id}`;
       return `
-        <a class="product-card" href="product.html?id=${p.id}">
+        <a class="product-card" href="${href}">
           <div class="thumb">
             ${thumbContent}
           </div>
