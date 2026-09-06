@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMGOVI Gift Card</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo">EMGOVI</a>
+  <div id="category-nav"></div>
+  <form class="search-form" onsubmit="event.preventDefault(); const q=this.querySelector('input').value.trim(); if(q) location.href='shop.html?search='+encodeURIComponent(q);">
+    <input type="text" placeholder="Search phones…">
+  </form>
+  <div class="header-actions">
+    <a href="account.html" class="icon-btn">Account</a>
+    <a href="cart.html" class="icon-btn">Cart<span class="cart-badge" style="display:none">0</span></a>
+  </div>
+</header>
+
+<section class="giftcard-hero">
+  <div class="eyebrow">EMGOVI Gift Card</div>
+  <h1>The perfect gift.<br>Every time.</h1>
+  <p>Let them choose exactly what they want. Delivered by email in seconds, redeemable on anything in the store.</p>
+  <div id="hero-card-wrap"></div>
+</section>
+
+<div class="container">
+  <div class="giftcard-purchase" id="purchase-panel">
+    <p style="text-align:center; color:var(--text-secondary);">Loading…</p>
+  </div>
+
+  <div class="giftcard-perks">
+    <div>
+      <div class="perk-title">Instant delivery</div>
+      <div class="perk-desc">Emailed the moment payment is confirmed. No waiting, no shipping.</div>
+    </div>
+    <div>
+      <div class="perk-title">Any occasion</div>
+      <div class="perk-desc">Birthdays, holidays, or just because, let them pick what they actually want.</div>
+    </div>
+    <div>
+      <div class="perk-title">Redeemable anywhere on EMGOVI</div>
+      <div class="perk-desc">Works toward any phone, charger, or power bank in the store.</div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">EMGOVI — Lagos, Nigeria</footer>
+
+<script src="js/app.js"></script>
+<script>
+let giftCardProduct = null;
+let selectedVariantId = null;
+let qty = 1;
+
+function render() {
+  const variant = giftCardProduct.variants.find(v => v.id === selectedVariantId) || giftCardProduct.variants[0];
+  selectedVariantId = variant ? variant.id : null;
+  const price = variant ? variant.price : giftCardProduct.base_price;
+
+  document.getElementById('hero-card-wrap').innerHTML = `
+    <div class="gift-card-visual hero">
+      <div class="gc-logo">EMGOVI</div>
+      <div class="gc-amount">${formatNaira(price)}</div>
+      <div class="gc-label">Digital Gift Card</div>
+    </div>
+  `;
+
+  document.getElementById('purchase-panel').innerHTML = `
+    <div class="option-group">
+      <label>Choose an amount</label>
+      <div class="denomination-grid" id="denom-grid">
+        ${giftCardProduct.variants.map(v => `
+          <button class="denomination-pill ${v.id === selectedVariantId ? 'selected' : ''}" data-variant-id="${v.id}">
+            ${v.storage || v.color}<br><span style="font-weight:400; font-size:12px;">${formatNaira(v.price)}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    <div class="option-group">
+      <label>Quantity</label>
+      <div class="qty-control" style="width:fit-content;">
+        <button id="qty-minus">−</button>
+        <span id="qty-value">${qty}</span>
+        <button id="qty-plus">+</button>
+      </div>
+    </div>
+    <button id="add-to-cart" class="btn btn-primary btn-block">Add to cart — ${formatNaira(price * qty)}</button>
+    <p style="color:var(--text-secondary); font-size:13px; margin-top:12px; text-align:center;">Delivered by email instantly after payment. No shipping required.</p>
+  `;
+
+  attachHandlers();
+}
+
+function attachHandlers() {
+  document.querySelectorAll('#denom-grid .denomination-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedVariantId = parseInt(btn.dataset.variantId, 10);
+      render();
+    });
+  });
+
+  document.getElementById('qty-minus').addEventListener('click', () => {
+    qty = Math.max(1, qty - 1);
+    render();
+  });
+  document.getElementById('qty-plus').addEventListener('click', () => {
+    qty = qty + 1;
+    render();
+  });
+
+  document.getElementById('add-to-cart').addEventListener('click', () => {
+    const variant = giftCardProduct.variants.find(v => v.id === selectedVariantId);
+    if (!variant) return;
+    addToCart({
+      variant_id: variant.id,
+      product_name: giftCardProduct.name,
+      variant_label: variant.storage || variant.color || '',
+      price: variant.price,
+      quantity: qty,
+      image_url: '',
+      is_digital: true,
+      category: 'Gift Cards',
+    });
+    const btn = document.getElementById('add-to-cart');
+    btn.textContent = 'Added ✓';
+    setTimeout(() => { render(); }, 1200);
+  });
+}
+
+async function loadGiftCard() {
+  try {
+    const products = await fetchJSON('/api/products?category=Gift%20Cards');
+    if (!products.length) {
+      document.getElementById('purchase-panel').innerHTML = `
+        <div class="empty-state">
+          <h2>No gift card available yet</h2>
+          <p>Check back soon.</p>
+        </div>
+      `;
+      return;
+    }
+    giftCardProduct = products[0];
+    if (!giftCardProduct.variants || giftCardProduct.variants.length === 0) {
+      document.getElementById('purchase-panel').innerHTML = `
+        <div class="empty-state">
+          <h2>No amounts set up yet</h2>
+          <p>Check back soon.</p>
+        </div>
+      `;
+      return;
+    }
+    selectedVariantId = giftCardProduct.variants[0].id;
+    render();
+  } catch (err) {
+    document.getElementById('purchase-panel').innerHTML = `<p style="color:var(--danger); text-align:center;">${err.message}</p>`;
+  }
+}
+loadGiftCard();
+</script>
+</body>
+</html>
