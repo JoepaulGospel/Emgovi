@@ -116,7 +116,7 @@ function renderCategoryMenu(containerId) {
       <button class="category-menu-btn" id="category-menu-btn" type="button">☰ Categories</button>
       <div class="category-dropdown" id="category-dropdown">
         <a href="shop.html">All products</a>
-        ${CATEGORIES.map((c) => `<a href="shop.html?category=${encodeURIComponent(c)}">${c}</a>`).join('')}
+        ${CATEGORIES.map((c) => `<a href="${c === 'Gift Cards' ? 'giftcard.html' : `shop.html?category=${encodeURIComponent(c)}`}">${c}</a>`).join('')}
       </div>
     </div>
   `;
