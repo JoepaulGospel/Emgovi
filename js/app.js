@@ -112,24 +112,11 @@ function renderCategoryMenu(containerId) {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="category-menu">
-      <button class="category-menu-btn" id="category-menu-btn" type="button">☰ Categories</button>
-      <div class="category-dropdown" id="category-dropdown">
-        <a href="shop.html">All products</a>
-        ${CATEGORIES.map((c) => `<a href="shop.html?category=${encodeURIComponent(c)}">${c}</a>`).join('')}
-        <a href="giftcard.html">Gift Cards</a>
-      </div>
-    </div>
+    <nav style="display:flex; gap:24px; font-size:14px; color:var(--text-secondary);">
+      <a href="shop.html">Phones</a>
+      <a href="giftcard.html">Gift Card</a>
+    </nav>
   `;
-
-  const btn = document.getElementById('category-menu-btn');
-  const dropdown = document.getElementById('category-dropdown');
-
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    dropdown.classList.toggle('open');
-  });
-  document.addEventListener('click', () => dropdown.classList.remove('open'));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
