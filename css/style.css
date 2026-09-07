@@ -305,25 +305,78 @@ button {
 
 .giftcard-fan {
   position: relative;
-  height: 300px;
+  height: 260px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto;
   max-width: 900px;
+  pointer-events: none;
 }
 
 .giftcard-fan-card {
   position: absolute;
-  width: 240px;
-  cursor: pointer;
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
+  width: 220px;
 }
 
 @media (max-width: 640px) {
-  .giftcard-fan { height: 240px; }
-  .giftcard-fan-card { width: 180px; }
-  .gift-card-visual.hero .gc-amount { font-size: 24px; }
+  .giftcard-fan { height: 200px; }
+  .giftcard-fan-card { width: 160px; }
+  .gift-card-visual.hero .gc-amount { font-size: 22px; }
+}
+
+.page-subheader {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 20px 24px;
+}
+
+.page-subheader .inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.color-swatch-grid {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.color-swatch-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+}
+
+.color-swatch-circle {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.color-swatch-item.selected .color-swatch-circle {
+  border-color: var(--text);
+  transform: scale(1.1);
+}
+
+.color-swatch-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.color-swatch-item.selected .color-swatch-label {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .giftcard-purchase {
