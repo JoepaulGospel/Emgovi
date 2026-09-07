@@ -55,19 +55,47 @@
 let giftCardProduct = null;
 let selectedVariantId = null;
 let qty = 1;
+let selectedColorIndex = 0;
+
+const CARD_COLORS = [
+  { name: 'Black', gradient: 'linear-gradient(135deg, #1D1D1F 0%, #3A3A3C 55%, #232325 100%)', text: '#F5F5F7', ring: '#1D1D1F' },
+  { name: 'Silver', gradient: 'linear-gradient(135deg, #F2F2F4 0%, #DCDCE0 55%, #C4C4C8 100%)', text: '#1D1D1F', ring: '#C4C4C8' },
+  { name: 'Space Gray', gradient: 'linear-gradient(135deg, #5A5A5D 0%, #6E6E73 55%, #48484A 100%)', text: '#F5F5F7', ring: '#5A5A5D' },
+  { name: 'Titanium', gradient: 'linear-gradient(135deg, #9C9A90 0%, #B7B4A8 55%, #7D7A6F 100%)', text: '#1D1D1F', ring: '#9C9A90' },
+  { name: 'Gold', gradient: 'linear-gradient(135deg, #F3E3C9 0%, #E5C89E 55%, #C7A06E 100%)', text: '#3A2E1A', ring: '#C7A06E' },
+];
 
 function render() {
   const variant = giftCardProduct.variants.find(v => v.id === selectedVariantId) || giftCardProduct.variants[0];
   selectedVariantId = variant ? variant.id : null;
   const price = variant ? variant.price : giftCardProduct.base_price;
 
+  const fanCards = CARD_COLORS.map((c, i) => {
+    const offset = i - selectedColorIndex;
+    const translateX = offset * 90;
+    const translateY = Math.abs(offset) * 16;
+    const rotate = offset * 9;
+    const scale = offset === 0 ? 1.08 : 0.9;
+    const opacity = Math.abs(offset) > 2 ? 0 : (offset === 0 ? 1 : 0.7);
+    const zIndex = 10 - Math.abs(offset);
+    return `
+      <div class="giftcard-fan-card" data-color-idx="${i}"
+           style="transform: translateX(${translateX}px) translateY(${translateY}px) rotate(${rotate}deg) scale(${scale}); opacity:${opacity}; z-index:${zIndex};">
+        <div class="gift-card-visual hero" style="background:${c.gradient}; color:${c.text}; margin:0;">
+          <div class="gc-logo">EMGOVI</div>
+          <div class="gc-amount">${formatNaira(price)}</div>
+          <div class="gc-label">${c.name}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
   document.getElementById('hero-card-wrap').innerHTML = `
-    <div class="gift-card-visual hero">
-      <div class="gc-logo">EMGOVI</div>
-      <div class="gc-amount">${formatNaira(price)}</div>
-      <div class="gc-label">Digital Gift Card</div>
-    </div>
+    <div class="giftcard-fan" id="giftcard-fan">${fanCards}</div>
+    <p style="text-align:center; color:rgba(245,245,247,0.5); font-size:13px; margin-top:8px;">Tap a card to choose your color</p>
   `;
+
+  const color = CARD_COLORS[selectedColorIndex];
 
   document.getElementById('purchase-panel').innerHTML = `
     <div class="option-group">
@@ -88,7 +116,7 @@ function render() {
         <button id="qty-plus">+</button>
       </div>
     </div>
-    <button id="add-to-cart" class="btn btn-primary btn-block">Add to cart — ${formatNaira(price * qty)}</button>
+    <button id="add-to-cart" class="btn btn-primary btn-block">Add ${color.name} card — ${formatNaira(price * qty)}</button>
     <p style="color:var(--text-secondary); font-size:13px; margin-top:12px; text-align:center;">Delivered by email instantly after payment. No shipping required.</p>
   `;
 
@@ -96,6 +124,13 @@ function render() {
 }
 
 function attachHandlers() {
+  document.querySelectorAll('.giftcard-fan-card').forEach(card => {
+    card.addEventListener('click', () => {
+      selectedColorIndex = parseInt(card.dataset.colorIdx, 10);
+      render();
+    });
+  });
+
   document.querySelectorAll('#denom-grid .denomination-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedVariantId = parseInt(btn.dataset.variantId, 10);
@@ -115,10 +150,11 @@ function attachHandlers() {
   document.getElementById('add-to-cart').addEventListener('click', () => {
     const variant = giftCardProduct.variants.find(v => v.id === selectedVariantId);
     if (!variant) return;
+    const color = CARD_COLORS[selectedColorIndex];
     addToCart({
       variant_id: variant.id,
-      product_name: giftCardProduct.name,
-      variant_label: variant.storage || variant.color || '',
+      product_name: `${giftCardProduct.name} — ${color.name}`,
+      variant_label: `${color.name} · ${variant.storage || variant.color || ''}`,
       price: variant.price,
       quantity: qty,
       image_url: '',
