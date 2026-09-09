@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EMGOVI — Phones, delivered.</title>
+<title>EMGOVI: Phones, delivered.</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
   <a href="index.html" class="logo">EMGOVI</a>
   <div id="category-nav"></div>
   <form class="search-form" onsubmit="event.preventDefault(); const q=this.querySelector('input').value.trim(); if(q) location.href='shop.html?search='+encodeURIComponent(q);">
-    <input type="text" placeholder="Search phones…">
+    <input type="text" placeholder="Search phones">
   </form>
   <div class="header-actions">
     <a href="account.html" class="icon-btn">Account</a>
@@ -35,14 +35,14 @@
   </div>
 </div>
 
-<footer class="site-footer">EMGOVI — Lagos, Nigeria</footer>
+<footer class="site-footer">EMGOVI, Lagos, Nigeria</footer>
 
 <script src="js/app.js"></script>
 <script>
 async function loadFeatured() {
   try {
     const fetched = await fetchJSON('/api/products');
-    const products = fetched.filter((p) => !p.is_addon);
+    const products = fetched.filter((p) => !p.is_addon && p.category !== 'Gift Cards');
     const grid = document.getElementById('featured-grid');
     const empty = document.getElementById('empty-state');
 
