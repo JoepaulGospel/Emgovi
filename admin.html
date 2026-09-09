@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin — EMGOVI</title>
+<title>Admin, EMGOVI</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -38,10 +38,10 @@
 
     <div id="overview" class="tab-panel active">
       <div class="stat-grid">
-        <div class="stat-card"><div class="label">Total revenue</div><div class="value" id="stat-revenue">—</div></div>
-        <div class="stat-card"><div class="label">Orders</div><div class="value" id="stat-orders">—</div></div>
-        <div class="stat-card"><div class="label">Products</div><div class="value" id="stat-products">—</div></div>
-        <div class="stat-card"><div class="label">Low stock alerts</div><div class="value" id="stat-lowstock">—</div></div>
+        <div class="stat-card"><div class="label">Total revenue</div><div class="value" id="stat-revenue">-</div></div>
+        <div class="stat-card"><div class="label">Orders</div><div class="value" id="stat-orders">-</div></div>
+        <div class="stat-card"><div class="label">Products</div><div class="value" id="stat-products">-</div></div>
+        <div class="stat-card"><div class="label">Low stock alerts</div><div class="value" id="stat-lowstock">-</div></div>
       </div>
       <h2 style="font-size:18px; margin-bottom:12px;">Best sellers</h2>
       <table class="admin-table" id="bestsellers-table">
@@ -71,7 +71,6 @@
   </div>
 </div>
 
-<!-- Product edit modal -->
 <div id="product-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:100; align-items:center; justify-content:center;">
   <div class="form-card" style="max-height:85vh; overflow-y:auto; width:520px;">
     <h1 id="modal-title">Add product</h1>
@@ -84,10 +83,10 @@
       <select id="product-category"></select>
       <input id="product-category-other" type="text" placeholder="Type new category name" style="display:none; margin-top:8px;">
     </div>
-    <div class="form-group"><label>Base price (₦)</label><input id="product-base-price" type="number"></div>
+    <div class="form-group"><label>Base price (Naira)</label><input id="product-base-price" type="number"></div>
     <div class="form-group" style="display:flex; align-items:center; gap:8px;">
       <input id="product-is-digital" type="checkbox" style="width:auto;">
-      <label style="margin:0;" for="product-is-digital">Digital product (e.g. protection plan) — no shipping required</label>
+      <label style="margin:0;" for="product-is-digital">Digital product (e.g. protection plan), no shipping required</label>
     </div>
     <div class="form-group" style="display:flex; align-items:center; gap:8px;">
       <input id="product-delivers-code" type="checkbox" style="width:auto;">
@@ -95,7 +94,7 @@
     </div>
     <div class="form-group" style="display:flex; align-items:center; gap:8px;">
       <input id="product-is-addon" type="checkbox" style="width:auto;">
-      <label style="margin:0;" for="product-is-addon">This is an add-on (e.g. a protection plan) — hidden from the shop, offered on product pages instead</label>
+      <label style="margin:0;" for="product-is-addon">This is an add-on (e.g. a protection plan), hidden from the shop, offered on product pages instead</label>
     </div>
     <div class="form-group" id="addon-category-group" style="display:none;">
       <label>Offer this add-on on product pages in category</label>
@@ -215,7 +214,7 @@ async function loadOrders() {
     <tr>
       <td>#${o.id}</td>
       <td>${o.delivery_address}<br><span style="color:var(--text-secondary);">${o.phone}</span></td>
-      <td>${o.items.map(i => `${i.product_name} × ${i.quantity}`).join('<br>')}</td>
+      <td>${o.items.map(i => `${i.product_name} x ${i.quantity}`).join('<br>')}</td>
       <td>${formatNaira(o.total)}</td>
       <td>
         <select class="status-select" data-id="${o.id}">
@@ -260,7 +259,6 @@ function renderOverview() {
     : '<tr><td colspan="3" style="color:var(--text-secondary);">No sales yet.</td></tr>';
 }
 
-// ---------- Product modal ----------
 let variantRows = [];
 
 document.getElementById('new-product-btn').addEventListener('click', () => openModal(null));
@@ -316,7 +314,7 @@ function renderVariantRows() {
       <input placeholder="Storage" value="${v.storage || ''}" data-field="storage" data-idx="${i}" style="width:22%; padding:8px; border-radius:8px; border:1px solid var(--border);">
       <input placeholder="Price" type="number" value="${v.price || ''}" data-field="price" data-idx="${i}" style="width:26%; padding:8px; border-radius:8px; border:1px solid var(--border);">
       <input placeholder="Stock" type="number" value="${v.stock_qty || ''}" data-field="stock_qty" data-idx="${i}" style="width:20%; padding:8px; border-radius:8px; border:1px solid var(--border);">
-      <button class="remove-variant-btn" data-idx="${i}" style="background:none; border:none; color:var(--danger); font-size:18px;">×</button>
+      <button class="remove-variant-btn" data-idx="${i}" style="background:none; border:none; color:var(--danger); font-size:18px;">x</button>
     </div>
   `).join('');
 
@@ -393,8 +391,8 @@ async function deleteProduct(id) {
   renderOverview();
 }
 
-// ---------- Gift Cards tab: a dedicated, simplified editor ----------
-let giftCardDenomRows = [];
+const GIFT_CARD_COLORS = ['Black', 'Silver', 'Space Gray', 'Titanium', 'Gold'];
+let giftCardColorRows = [];
 
 function findGiftCardProduct() {
   return allProducts.find(p => p.category === 'Gift Cards');
@@ -408,7 +406,7 @@ function renderGiftCardsTab() {
     container.innerHTML = `
       <div class="empty-state">
         <h2>No gift card set up yet</h2>
-        <p>Create it once with starter amounts, then manage everything here from now on, just amounts and prices.</p>
+        <p>Create it once, then just edit the price for each color here from now on.</p>
         <button id="create-giftcard-btn" class="btn btn-primary" style="margin-top:16px;">Create Gift Card</button>
       </div>
     `;
@@ -416,49 +414,39 @@ function renderGiftCardsTab() {
     return;
   }
 
-  giftCardDenomRows = gc.variants.map(v => ({ storage: v.storage, price: v.price, stock_qty: v.stock_qty }));
+  giftCardColorRows = GIFT_CARD_COLORS.map(name => {
+    const existing = gc.variants.find(v => v.color === name);
+    return { color: name, price: existing ? existing.price : '', stock_qty: existing ? existing.stock_qty : 999 };
+  });
 
   container.innerHTML = `
-    <h2 style="font-size:18px; margin-bottom:4px;">Gift Card amounts</h2>
-    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Add, edit, or remove the amounts customers can buy. Nothing else about gift cards needs any setup.</p>
+    <h2 style="font-size:18px; margin-bottom:4px;">Gift Card colors</h2>
+    <p style="font-size:13px; color:var(--text-secondary); margin-bottom:16px;">Set a price and stock for each color. Customers pick a color when buying, that choice sets the price.</p>
     <div id="giftcard-error" class="form-error"></div>
     <table class="admin-table">
-      <thead><tr><th>Label (shown to customer)</th><th>Price (₦)</th><th>Stock</th><th></th></tr></thead>
+      <thead><tr><th>Color</th><th>Price (Naira)</th><th>Stock</th></tr></thead>
       <tbody id="giftcard-rows-tbody"></tbody>
     </table>
-    <button id="add-giftcard-row-btn" class="btn btn-secondary" style="margin-top:16px;">+ Add amount</button>
-    <button id="save-giftcards-btn" class="btn btn-primary" style="margin-top:16px; margin-left:8px;">Save changes</button>
+    <button id="save-giftcards-btn" class="btn btn-primary" style="margin-top:16px;">Save changes</button>
   `;
 
   renderGiftCardRows();
-
-  document.getElementById('add-giftcard-row-btn').addEventListener('click', () => {
-    giftCardDenomRows.push({ storage: '', price: '', stock_qty: 999 });
-    renderGiftCardRows();
-  });
 
   document.getElementById('save-giftcards-btn').addEventListener('click', () => saveGiftCards(gc));
 }
 
 function renderGiftCardRows() {
-  document.getElementById('giftcard-rows-tbody').innerHTML = giftCardDenomRows.map((v, i) => `
+  document.getElementById('giftcard-rows-tbody').innerHTML = giftCardColorRows.map((v, i) => `
     <tr>
-      <td><input data-idx="${i}" data-field="storage" value="${v.storage || ''}" placeholder="e.g. $100" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;"></td>
-      <td><input type="number" data-idx="${i}" data-field="price" value="${v.price || ''}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;"></td>
-      <td><input type="number" data-idx="${i}" data-field="stock_qty" value="${v.stock_qty || 999}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;"></td>
-      <td><button class="remove-giftcard-row-btn" data-idx="${i}" style="background:none; border:none; color:var(--danger); font-size:18px;">×</button></td>
+      <td style="font-weight:600;">${v.color}</td>
+      <td><input type="number" data-idx="${i}" data-field="price" value="${v.price}" placeholder="e.g. 150000" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;"></td>
+      <td><input type="number" data-idx="${i}" data-field="stock_qty" value="${v.stock_qty}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;"></td>
     </tr>
   `).join('');
 
   document.querySelectorAll('#giftcard-rows-tbody input').forEach(inp => {
     inp.addEventListener('input', () => {
-      giftCardDenomRows[inp.dataset.idx][inp.dataset.field] = inp.value;
-    });
-  });
-  document.querySelectorAll('.remove-giftcard-row-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      giftCardDenomRows.splice(parseInt(btn.dataset.idx, 10), 1);
-      renderGiftCardRows();
+      giftCardColorRows[inp.dataset.idx][inp.dataset.field] = inp.value;
     });
   });
 }
@@ -467,12 +455,12 @@ async function saveGiftCards(gc) {
   const errorEl = document.getElementById('giftcard-error');
   errorEl.classList.remove('visible');
 
-  const variants = giftCardDenomRows
+  const variants = giftCardColorRows
     .filter(v => v.price)
-    .map(v => ({ color: '', storage: v.storage, price: parseInt(v.price, 10), stock_qty: parseInt(v.stock_qty, 10) || 999 }));
+    .map(v => ({ color: v.color, storage: '', price: parseInt(v.price, 10), stock_qty: parseInt(v.stock_qty, 10) || 999 }));
 
   if (variants.length === 0) {
-    errorEl.textContent = 'Add at least one amount with a price.';
+    errorEl.textContent = 'Set a price for at least one color.';
     errorEl.classList.add('visible');
     return;
   }
@@ -513,17 +501,13 @@ async function createGiftCardProduct() {
         name: 'EMGOVI Gift Card',
         description: 'Give the gift of choice. Delivered instantly by email as a redeemable code, no shipping required.',
         category: 'Gift Cards',
-        base_price: 135000,
+        base_price: 150000,
         image_url: '',
         is_digital: true,
         delivers_code: true,
         is_addon: false,
         addon_for_category: null,
-        variants: [
-          { color: '', storage: '$100', price: 135000, stock_qty: 999 },
-          { color: '', storage: '$200', price: 270000, stock_qty: 999 },
-          { color: '', storage: '$500', price: 675000, stock_qty: 999 },
-        ],
+        variants: GIFT_CARD_COLORS.map(name => ({ color: name, storage: '', price: 150000, stock_qty: 999 })),
       }),
     });
     await loadProducts();
